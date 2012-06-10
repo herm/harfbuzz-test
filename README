@@ -1,0 +1,6 @@
+To compile run
+qmake
+make
+
+and then start with
+./harfbuzz-test
