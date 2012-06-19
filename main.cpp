@@ -2,15 +2,135 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <list>
 
 #include <boost/iostreams/device/mapped_file.hpp>
 
 #include <harfbuzz/hb.h>
 #include <harfbuzz/hb-ft.h>
 
+#include <unicode/unistr.h>
+#include <unicode/uscript.h>
+#include <unicode/ubidi.h>
+
 using namespace std;
 namespace mapnik
 {
+
+struct text_item
+{
+    UnicodeString str;
+    UScriptCode script;
+    unsigned format; //TODO
+    bool rtl;
+    text_item(UnicodeString str) :
+        str(str), script(), format(), rtl(false)
+    {
+
+    }
+};
+
+typedef unsigned format_t; /*TODO*/
+
+/** This class splits text into parts which all have the same
+ * - direction (LTR, RTL)
+ * - format
+ * - script (http://en.wikipedia.org/wiki/Scripts_in_Unicode)
+ **/
+class text_itemizer
+{
+public:
+    text_itemizer();
+    void add_text(UnicodeString str, format_t format);
+    void itemize();
+private:
+    struct format_run
+    {
+        format_run(format_t format, unsigned limit) : format(format), limit(limit) {}
+        format_t format;
+        unsigned limit;
+    };
+
+    struct direction_run
+    {
+        direction_run(UBiDiDirection direction, unsigned limit) : direction(direction), limit(limit) {}
+        UBiDiDirection direction;
+        unsigned limit;
+    };
+
+    struct script_run
+    {
+        script_run(UScriptCode script, unsigned limit) : script(script), limit(limit) {}
+        UScriptCode script;
+        unsigned limit;
+    };
+    UnicodeString text;
+    std::list<format_run> format_runs;
+    std::list<direction_run> direction_runs;
+    std::list<script_run> script_runs;
+    void itemize_direction();
+    void itemize_script();
+    void create_item_list();
+};
+
+text_itemizer::text_itemizer() : text(), format_runs(), direction_runs(), script_runs()
+{
+
+}
+
+void text_itemizer::add_text(UnicodeString str, format_t format)
+{
+    text += str;
+    format_runs.push_back(format_run(format, text.length()));
+}
+
+void text_itemizer::itemize()
+{
+    // format itemiziation is done by add_text()
+    itemize_direction();
+}
+
+void text_itemizer::itemize_direction()
+{
+    UErrorCode error;
+    int32_t length = text.length();
+    UBiDi *bidi = ubidi_openSized(length, 0, &error);
+    ubidi_setPara(bidi, text.getBuffer(), length, UBIDI_DEFAULT_LTR, 0, &error);
+    if (U_SUCCESS(error))
+    {
+        UBiDiDirection direction = ubidi_getDirection(bidi);
+        if(direction != UBIDI_MIXED)
+        {
+            direction_runs.push_back(direction_run(direction, length));
+        } else
+        {
+            // mixed-directional
+            int32_t count = ubidi_countRuns(bidi, &error);
+            if(U_SUCCESS(error))
+            {
+                int32_t position = 0;
+                for(int i=0; i<count; i++)
+                {
+                    int32_t length;
+                    direction = ubidi_getVisualRun(bidi, i++, 0, &length);
+                    position += length;
+                    direction_runs.push_back(direction_run(direction, position));
+                }
+            }
+        }
+    }
+    if (bidi) ubidi_close(bidi);
+}
+
+void text_itemizer::itemize_script()
+{
+}
+
+void text_itemizer::create_item_list()
+{
+}
+
+
 class font_info
 {
 public:
@@ -31,6 +151,7 @@ public:
 
     void process_text(std::string text)
     {
+        std::cout << "Text:" << text << " length: "<<text.length() <<"\n";
         hb_buffer_reset(buffer_);
         hb_buffer_add_utf8(buffer_, text.c_str(), text.length(), 0, text.length());
 #if 0
@@ -38,11 +159,7 @@ public:
         hb_buffer_set_script(buffer, hb_script_from_string (script, -1));
         hb_buffer_set_language(buffer, hb_language_from_string (language, -1));
 #endif
-        hb_bool_t result = hb_shape_full(font_, buffer_, 0 /*features*/, 0 /*num_features*/, 0 /*shapers*/);
-        if (!result) {
-            std::cerr << "ERROR: Shaping failed!\n";
-            return; //TODO: Exception
-        }
+        hb_shape(font_, buffer_, 0 /*features*/, 0 /*num_features*/);
         int num_glyphs = hb_buffer_get_length(buffer_);
         hb_glyph_info_t *hb_glyph = hb_buffer_get_glyph_infos(buffer_, NULL);
         hb_glyph_position_t *hb_position = hb_buffer_get_glyph_positions(buffer_, NULL);
@@ -112,11 +229,11 @@ protected:
 
 int main()
 {
-    mapnik::font_info unifont("/home/r2d2/build/mapnik/fonts/unifont-5.1.20080907.ttf");
+    mapnik::font_info unifont("./unifont-5.1.20080907.ttf");
     std::cout << "Hello World!\n";
     unifont.process_text("Hello World!");
     std::cout << "Complex text:\n";
-    unifont.process_text("कि கே કિ");
+    unifont.process_text("कि கே કિ ฐู");
     return 0;
 }
 
