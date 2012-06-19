@@ -42,7 +42,7 @@ class text_itemizer
 public:
     text_itemizer();
     void add_text(UnicodeString str, format_t format);
-    void itemize();
+    std::list<text_item> const& itemize();
 private:
     struct format_run
     {
@@ -71,6 +71,7 @@ private:
     void itemize_direction();
     void itemize_script();
     void create_item_list();
+    std::list<text_item> output;
 };
 
 text_itemizer::text_itemizer() : text(), format_runs(), direction_runs(), script_runs()
@@ -84,10 +85,13 @@ void text_itemizer::add_text(UnicodeString str, format_t format)
     format_runs.push_back(format_run(format, text.length()));
 }
 
-void text_itemizer::itemize()
+std::list<text_item> const& text_itemizer::itemize()
 {
     // format itemiziation is done by add_text()
     itemize_direction();
+    itemize_script();
+    create_item_list();
+    return output;
 }
 
 void text_itemizer::itemize_direction()
