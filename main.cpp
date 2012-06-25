@@ -17,11 +17,13 @@ using namespace std;
 namespace mapnik
 {
 
+typedef unsigned format_t; /*TODO*/
+
 struct text_item
 {
     UnicodeString str;
     UScriptCode script;
-    unsigned format; //TODO
+    format_t format;
     bool rtl;
     text_item(UnicodeString str) :
         str(str), script(), format(), rtl(false)
@@ -29,8 +31,6 @@ struct text_item
 
     }
 };
-
-typedef unsigned format_t; /*TODO*/
 
 /** This class splits text into parts which all have the same
  * - direction (LTR, RTL)
@@ -44,30 +44,16 @@ public:
     void add_text(UnicodeString str, format_t format);
     std::list<text_item> const& itemize();
 private:
-    struct format_run
+    template<typename T> struct run
     {
-        format_run(format_t format, unsigned limit) : format(format), limit(limit) {}
-        format_t format;
+        run(T data, unsigned limit) :  limit(limit), data(data){}
         unsigned limit;
-    };
-
-    struct direction_run
-    {
-        direction_run(UBiDiDirection direction, unsigned limit) : direction(direction), limit(limit) {}
-        UBiDiDirection direction;
-        unsigned limit;
-    };
-
-    struct script_run
-    {
-        script_run(UScriptCode script, unsigned limit) : script(script), limit(limit) {}
-        UScriptCode script;
-        unsigned limit;
+        T data;
     };
     UnicodeString text;
-    std::list<format_run> format_runs;
-    std::list<direction_run> direction_runs;
-    std::list<script_run> script_runs;
+    std::list<run<format_t> > format_runs;
+    std::list<run<UBiDiDirection> > direction_runs;
+    std::list<run<UScriptCode> > script_runs;
     void itemize_direction();
     void itemize_script();
     void create_item_list();
@@ -82,7 +68,7 @@ text_itemizer::text_itemizer() : text(), format_runs(), direction_runs(), script
 void text_itemizer::add_text(UnicodeString str, format_t format)
 {
     text += str;
-    format_runs.push_back(format_run(format, text.length()));
+    format_runs.push_back(run<format_t>(format, text.length()));
 }
 
 std::list<text_item> const& text_itemizer::itemize()
@@ -105,7 +91,7 @@ void text_itemizer::itemize_direction()
         UBiDiDirection direction = ubidi_getDirection(bidi);
         if(direction != UBIDI_MIXED)
         {
-            direction_runs.push_back(direction_run(direction, length));
+            direction_runs.push_back(run<UBiDiDirection>(direction, length));
         } else
         {
             // mixed-directional
@@ -118,7 +104,7 @@ void text_itemizer::itemize_direction()
                     int32_t length;
                     direction = ubidi_getVisualRun(bidi, i++, 0, &length);
                     position += length;
-                    direction_runs.push_back(direction_run(direction, position));
+                    direction_runs.push_back(run<UBiDiDirection>(direction, position));
                 }
             }
         }
