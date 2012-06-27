@@ -18,13 +18,19 @@ using namespace std;
 namespace mapnik
 {
 
-typedef unsigned format_t; /*TODO*/
+struct char_properties
+{
+    std::string face_name;
+    float text_size;
+    double character_spacing;
+    double line_spacing;
+};
 
 struct text_item
 {
     UnicodeString str;
     UScriptCode script;
-    format_t format;
+    char_properties format;
     UBiDiDirection rtl;
     text_item(UnicodeString const& str) :
         str(str), script(), format(), rtl(UBIDI_LTR)
@@ -42,7 +48,7 @@ class text_itemizer
 {
 public:
     text_itemizer();
-    void add_text(UnicodeString str, format_t format);
+    void add_text(UnicodeString str, char_properties format);
     std::list<text_item> const& itemize();
     void clear();
 private:
@@ -52,7 +58,7 @@ private:
         unsigned limit;
         T data;
     };
-    typedef run<format_t> format_run_t;
+    typedef run<char_properties> format_run_t;
     typedef run<UBiDiDirection> direction_run_t;
     typedef run<UScriptCode> script_run_t;
     UnicodeString text;
@@ -70,7 +76,7 @@ text_itemizer::text_itemizer() : text(), format_runs(), direction_runs(), script
 
 }
 
-void text_itemizer::add_text(UnicodeString str, format_t format)
+void text_itemizer::add_text(UnicodeString str, char_properties format)
 {
     text += str;
     format_runs.push_back(format_run_t(format, text.length()));
@@ -276,23 +282,38 @@ protected:
     hb_buffer_t *buffer_;
 };
 
+class text_layout
+{
+public:
+    text_layout(double text_ratio, double wrap_width);
+private:
+    text_itemizer itemizer;
+    double text_ratio_;
+    double wrap_width_;
+};
+
+text_layout::text_layout(double text_ratio, double wrap_width) : text_ratio_(text_ratio), wrap_width_(wrap_width)
+{
+}
+
 } //ns mapnik
 
 int main()
 {
     mapnik::text_itemizer itemizer;
-    itemizer.add_text("Hello ", 1);
-    itemizer.add_text("World", 2);
-    itemizer.add_text("किகே", 1);
-    itemizer.add_text("وگرىmixed", 1);
-    itemizer.add_text("وگرى", 1);
+    mapnik::char_properties dummy;
+    itemizer.add_text("Hello ", dummy);
+    itemizer.add_text("World", dummy);
+    itemizer.add_text("किகே", dummy);
+    itemizer.add_text("وگرىmixed", dummy);
+    itemizer.add_text("وگرى", dummy);
     std::list<mapnik::text_item> const& list = itemizer.itemize();
     std::list<mapnik::text_item>::const_iterator itr = list.begin(), end = list.end();
     for (;itr!=end; itr++)
     {
         std::string s;
         itr->str.toUTF8String(s);
-        std::cout << "Text item: text: " << s << " rtl: " << itr->rtl << "format: " << itr->format << "script: " << uscript_getName(itr->script) << "\n";
+        std::cout << "Text item: text: " << s << " rtl: " << itr->rtl << "script: " << uscript_getName(itr->script) << "\n";
     }
     mapnik::font_info unifont("./unifont-5.1.20080907.ttf");
     std::cout << "Hello World!\n";
