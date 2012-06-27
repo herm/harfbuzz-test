@@ -12,6 +12,7 @@
 #include <unicode/unistr.h>
 #include <unicode/uscript.h>
 #include <unicode/ubidi.h>
+#include "scrptrun.h"
 
 using namespace std;
 namespace mapnik
@@ -129,8 +130,12 @@ void text_itemizer::itemize_direction()
 void text_itemizer::itemize_script()
 {
     script_runs.clear();
-    //TODO: Write this function
-    script_runs.push_back(script_run_t(USCRIPT_LATIN, text.length()));
+
+
+    ScriptRun runs(text.getBuffer(), text.length());
+    while (runs.next()) {
+        script_runs.push_back(script_run_t(runs.getScriptCode(), runs.getScriptEnd()));
+    }
 }
 
 void text_itemizer::create_item_list()
@@ -141,8 +146,7 @@ void text_itemizer::create_item_list()
     std::list<format_run_t>::const_iterator format_itr = format_runs.begin(), format_end = format_runs.end();
     while (position < text.length())
     {
-        unsigned next_position = dir_itr->limit; //min(script_itr->limit, min(dir_itr->limit, format_itr->limit));
-        std::cout << "p" << position << " " << next_position << "\n";
+        unsigned next_position = min(script_itr->limit, min(dir_itr->limit, format_itr->limit));
         text_item item(text.tempSubStringBetween(position, next_position));
         item.format = format_itr->data;
         item.script = script_itr->data;
@@ -286,7 +290,6 @@ int main()
     std::list<mapnik::text_item>::const_iterator itr = list.begin(), end = list.end();
     for (;itr!=end; itr++)
     {
-        std::cout << itr->str.length();
         std::string s;
         itr->str.toUTF8String(s);
         std::cout << "Text item: text: " << s << " rtl: " << itr->rtl << "format: " << itr->format << "script: " << uscript_getName(itr->script) << "\n";

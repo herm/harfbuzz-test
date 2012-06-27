@@ -4,5 +4,5 @@ CONFIG -= qt
 
 INCLUDEPATH = /usr/include/freetype2
 LIBS += -lharfbuzz
-SOURCES += main.cpp
+SOURCES += main.cpp scrptrun.cpp
 
