@@ -289,7 +289,7 @@ int main()
         std::cout << itr->str.length();
         std::string s;
         itr->str.toUTF8String(s);
-        std::cout << "Text item: text: " << s << " rtl: " << itr->rtl << "format: " << itr->format << "script: " << itr->script << "\n";
+        std::cout << "Text item: text: " << s << " rtl: " << itr->rtl << "format: " << itr->format << "script: " << uscript_getName(itr->script) << "\n";
     }
     mapnik::font_info unifont("./unifont-5.1.20080907.ttf");
     std::cout << "Hello World!\n";
