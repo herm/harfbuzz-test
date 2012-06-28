@@ -7,6 +7,7 @@
 #include <unicode/unistr.h>
 class hb_font_t;
 class hb_buffer_t;
+class hb_glyph_info_t;
 
 namespace mapnik
 {
@@ -19,6 +20,7 @@ public:
     ~text_shaping();
 
     void process_text(UnicodeString const& text);
+    hb_buffer_t *get_buffer() { return buffer_; }
 
 protected:
     static void free_data(void *data);

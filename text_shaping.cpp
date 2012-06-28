@@ -6,6 +6,7 @@
 #include <fstream>
 
 //harf-buzz
+#define HAVE_FREETYPE
 #include <harfbuzz/hb.h>
 #include <harfbuzz/hb-ft.h>
 
@@ -41,20 +42,6 @@ void text_shaping::process_text(const UnicodeString &text)
     hb_buffer_set_language(buffer, hb_language_from_string (language, -1));
 #endif
     hb_shape(font_, buffer_, 0 /*features*/, 0 /*num_features*/);
-    int num_glyphs = hb_buffer_get_length(buffer_);
-    hb_glyph_info_t *hb_glyph = hb_buffer_get_glyph_infos(buffer_, NULL);
-    hb_glyph_position_t *hb_position = hb_buffer_get_glyph_positions(buffer_, NULL);
-    for (int i=0; i<num_glyphs; i++)
-    {
-        std::cout << "glyph codepoint:" << hb_glyph[i].codepoint <<
-                     " cluster: " << hb_glyph[i].cluster <<
-                     " mask: " << hb_glyph[i].mask <<
-                     " x_advance: "<< hb_position[i].x_advance <<
-                     " x_advance: "<< hb_position[i].y_advance <<
-                     " x_offset: "<< hb_position[i].x_offset <<
-                     " y_offset: "<< hb_position[i].y_offset << "\n";
-//            std::cout << "glyph:" << hb_glyph->codepoint << "\n";
-    }
 }
 
 void text_shaping::free_data(void *data)
@@ -71,7 +58,8 @@ void text_shaping::load_font()
     char *font_data;
     unsigned int size;
 
-    std::ifstream file("./unifont-5.1.20080907.ttf" /*TODO*/, std::ios::in|std::ios::binary|std::ios::ate);
+//    std::ifstream file("./unifont-5.1.20080907.ttf" /*TODO*/, std::ios::in|std::ios::binary|std::ios::ate);
+    std::ifstream file("./DejaVuSans.ttf" /*TODO*/, std::ios::in|std::ios::binary|std::ios::ate);
     if (file.is_open())
     {
         size = file.tellg();
