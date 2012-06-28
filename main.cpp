@@ -48,7 +48,7 @@ class text_itemizer
 {
 public:
     text_itemizer();
-    void add_text(UnicodeString str, char_properties format);
+    void add_text(UnicodeString str, char_properties const& format);
     std::list<text_item> const& itemize();
     void clear();
 private:
@@ -76,7 +76,7 @@ text_itemizer::text_itemizer() : text(), format_runs(), direction_runs(), script
 
 }
 
-void text_itemizer::add_text(UnicodeString str, char_properties format)
+void text_itemizer::add_text(UnicodeString str, char_properties const& format)
 {
     text += str;
     format_runs.push_back(format_run_t(format, text.length()));
@@ -286,6 +286,7 @@ class text_layout
 {
 public:
     text_layout(double text_ratio, double wrap_width);
+    void add_text(UnicodeString const& str, char_properties const& format);
 private:
     text_itemizer itemizer;
     double text_ratio_;
