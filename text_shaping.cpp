@@ -28,9 +28,9 @@ text_shaping::~text_shaping()
     hb_font_destroy(font_);
 }
 
-void text_shaping::process_text(const UnicodeString &text)
+uint32_t text_shaping::process_text(const UnicodeString &text)
 {
-    if (!font_) return;
+    if (!font_) return 0;
     hb_buffer_reset(buffer_);
 
     std::string s;
@@ -42,6 +42,7 @@ void text_shaping::process_text(const UnicodeString &text)
     hb_buffer_set_language(buffer, hb_language_from_string (language, -1));
 #endif
     hb_shape(font_, buffer_, 0 /*features*/, 0 /*num_features*/);
+    return s.length();
 }
 
 void text_shaping::free_data(void *data)

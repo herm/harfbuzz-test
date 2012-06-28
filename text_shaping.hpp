@@ -19,7 +19,7 @@ public:
     text_shaping();
     ~text_shaping();
 
-    void process_text(UnicodeString const& text);
+    uint32_t process_text(UnicodeString const& text);
     hb_buffer_t *get_buffer() { return buffer_; }
 
 protected:

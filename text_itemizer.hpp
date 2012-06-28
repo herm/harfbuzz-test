@@ -45,6 +45,7 @@ public:
     void add_text(UnicodeString str, char_properties const& format);
     std::list<text_item> const& itemize();
     void clear();
+    UnicodeString const& get_text() { return text; }
 private:
     template<typename T> struct run
     {
