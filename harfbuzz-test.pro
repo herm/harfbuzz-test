@@ -4,8 +4,9 @@ CONFIG -= qt
 
 INCLUDEPATH = /usr/include/freetype2
 LIBS += -lharfbuzz
-SOURCES += main.cpp scrptrun.cpp
+SOURCES += main.cpp scrptrun.cpp \
+    text_itemizer.cpp
 
 HEADERS += \
-    scrptrun.h
-
+    scrptrun.h \
+    text_itemizer.hpp

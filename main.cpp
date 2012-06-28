@@ -1,3 +1,5 @@
+#include "text_itemizer.hpp"
+
 #define HAVE_FREETYPE
 #include <iostream>
 #include <string>
@@ -9,182 +11,9 @@
 #include <harfbuzz/hb.h>
 #include <harfbuzz/hb-ft.h>
 
-#include <unicode/unistr.h>
-#include <unicode/uscript.h>
-#include <unicode/ubidi.h>
-#include "scrptrun.h"
-
 using namespace std;
 namespace mapnik
 {
-
-struct char_properties
-{
-    std::string face_name;
-    float text_size;
-    double character_spacing;
-    double line_spacing;
-};
-
-struct text_item
-{
-    UnicodeString str;
-    UScriptCode script;
-    char_properties format;
-    UBiDiDirection rtl;
-    text_item(UnicodeString const& str) :
-        str(str), script(), format(), rtl(UBIDI_LTR)
-    {
-
-    }
-};
-
-/** This class splits text into parts which all have the same
- * - direction (LTR, RTL)
- * - format
- * - script (http://en.wikipedia.org/wiki/Scripts_in_Unicode)
- **/
-class text_itemizer
-{
-public:
-    text_itemizer();
-    void add_text(UnicodeString str, char_properties const& format);
-    std::list<text_item> const& itemize();
-    void clear();
-private:
-    template<typename T> struct run
-    {
-        run(T data, unsigned limit) :  limit(limit), data(data){}
-        unsigned limit;
-        T data;
-    };
-    typedef run<char_properties> format_run_t;
-    typedef run<UBiDiDirection> direction_run_t;
-    typedef run<UScriptCode> script_run_t;
-    UnicodeString text;
-    std::list<format_run_t> format_runs;
-    std::list<direction_run_t> direction_runs;
-    std::list<script_run_t> script_runs;
-    void itemize_direction();
-    void itemize_script();
-    void create_item_list();
-    std::list<text_item> output;
-};
-
-text_itemizer::text_itemizer() : text(), format_runs(), direction_runs(), script_runs()
-{
-
-}
-
-void text_itemizer::add_text(UnicodeString str, char_properties const& format)
-{
-    text += str;
-    format_runs.push_back(format_run_t(format, text.length()));
-}
-
-std::list<text_item> const& text_itemizer::itemize()
-{
-    // format itemiziation is done by add_text()
-    itemize_direction();
-    itemize_script();
-    create_item_list();
-    return output;
-}
-
-void text_itemizer::clear()
-{
-    output.clear();
-    text.remove();
-    format_runs.clear();
-}
-
-void text_itemizer::itemize_direction()
-{
-    direction_runs.clear();
-    UErrorCode error = U_ZERO_ERROR;
-    int32_t length = text.length();
-    UBiDi *bidi = ubidi_openSized(length, 0, &error);
-    ubidi_setPara(bidi, text.getBuffer(), length, UBIDI_DEFAULT_LTR, 0, &error);
-    if (U_SUCCESS(error))
-    {
-        UBiDiDirection direction = ubidi_getDirection(bidi);
-        if(direction != UBIDI_MIXED)
-        {
-            direction_runs.push_back(direction_run_t(direction, length));
-        } else
-        {
-            // mixed-directional
-            int32_t count = ubidi_countRuns(bidi, &error);
-            if(U_SUCCESS(error))
-            {
-                int32_t position = 0;
-                for(int i=0; i<count; i++)
-                {
-                    int32_t length;
-                    direction = ubidi_getVisualRun(bidi, i, 0, &length);
-                    position += length;
-                    direction_runs.push_back(direction_run_t(direction, position));
-                }
-            }
-        }
-    } else{
-        std::cout << "ERROR:" << u_errorName(error) << "\n"; //TODO: Exception
-    }
-    if (bidi) ubidi_close(bidi);
-}
-
-void text_itemizer::itemize_script()
-{
-    script_runs.clear();
-
-
-    ScriptRun runs(text.getBuffer(), text.length());
-    while (runs.next()) {
-        script_runs.push_back(script_run_t(runs.getScriptCode(), runs.getScriptEnd()));
-    }
-}
-
-void text_itemizer::create_item_list()
-{
-    int32_t position = 0;
-    std::list<script_run_t>::const_iterator script_itr = script_runs.begin(), script_end = script_runs.end();
-    std::list<direction_run_t>::const_iterator dir_itr = direction_runs.begin(), dir_end = direction_runs.end();
-    std::list<format_run_t>::const_iterator format_itr = format_runs.begin(), format_end = format_runs.end();
-    while (position < text.length())
-    {
-        unsigned next_position = min(script_itr->limit, min(dir_itr->limit, format_itr->limit));
-        text_item item(text.tempSubStringBetween(position, next_position));
-        item.format = format_itr->data;
-        item.script = script_itr->data;
-        item.rtl = dir_itr->data;
-        output.push_back(item);
-        if (script_itr->limit == next_position)
-        {
-            if (script_itr == script_end) {
-                //TODO: EXCEPTION
-                std::cout << "Limit error\n";
-            }
-            script_itr++;
-        }
-        if (dir_itr->limit == next_position)
-        {
-            if (dir_itr == dir_end) {
-                //TODO: EXCEPTION
-                std::cout << "Limit error\n";
-            }
-            dir_itr++;
-        }
-        if (format_itr->limit == next_position)
-        {
-            if (format_itr == format_end) {
-                //TODO: EXCEPTION
-                std::cout << "Limit error\n";
-            }
-            format_itr++;
-        }
-        position = next_position;
-    }
-}
 
 
 class font_info
@@ -197,6 +26,7 @@ public:
           buffer_ (hb_buffer_create())
     {
         load_font();
+        min(1, 2);
     }
 
     ~font_info()
@@ -286,7 +116,11 @@ class text_layout
 {
 public:
     text_layout(double text_ratio, double wrap_width);
-    void add_text(UnicodeString const& str, char_properties const& format);
+    void add_text(UnicodeString const& str, char_properties const& format)
+    {
+        itemizer.add_text(str, format);
+    }
+
 private:
     text_itemizer itemizer;
     double text_ratio_;
