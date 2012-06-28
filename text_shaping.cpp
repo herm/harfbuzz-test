@@ -35,7 +35,7 @@ void text_shaping::process_text(const UnicodeString &text)
 
     std::string s;
     text.toUTF8String(s);
-    hb_buffer_add_utf8(buffer_, s.c_str(), text.length(), 0, text.length());
+    hb_buffer_add_utf8(buffer_, s.c_str(), s.length(), 0, -1);
 #if 0
     hb_buffer_set_direction(buffer, hb_direction_from_string (direction, -1));
     hb_buffer_set_script(buffer, hb_script_from_string (script, -1));
