@@ -15,6 +15,7 @@ int main()
     layout.add_text("وگرى", dummy);
     layout.add_text("German umlauts: äöüß", dummy);
     layout.add_text("äöüß", dummy);
+    layout.add_text("Ligatures: ff fi ffi fl", dummy);
     layout.shape_text();
 
     return 0;
